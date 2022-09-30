@@ -79,6 +79,7 @@ status() {
 build() {
   if [ -d cmake-build-debug ]; then
     cd cmake-build-debug
+    cmake ..
     make clean && make
     cd ..
   else
