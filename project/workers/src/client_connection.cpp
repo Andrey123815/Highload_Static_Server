@@ -75,9 +75,7 @@ connection_status_t ClientConnection::connection_processing() {
         write_to_logs("in stage SEND_HTTP_HEADER_RESPONSE", INFO);
         if (this->send_http_header_response()) {
             this->stage = SEND_FILE;
-            write_to_logs("stage set in SEND_FILE", INFO);
         } else if (clock() / CLOCKS_PER_SEC - this->timeout > CLIENT_SEC_TIMEOUT) {
-            write_to_logs("TIMEOUT stage", ERROR);
             this->message_to_log(ERROR_TIMEOUT);
             return CONNECTION_TIMEOUT_ERROR;
         }
@@ -87,20 +85,15 @@ connection_status_t ClientConnection::connection_processing() {
         return CONNECTION_FINISHED;
     }
 
-    write_to_logs("BEFORE SEND FILE", ERROR);
-
     if (request_.get_method() == HEAD_METHOD && this->stage == SEND_FILE) {
         return CONNECTION_FINISHED;
     }
 
     if (this->stage == SEND_FILE) {
-        write_to_logs("CHECKED on SEND_FILE", ERROR);
         if (this->send_file()) {
             this->message_to_log(INFO_CONNECTION_FINISHED);
-            write_to_logs("AFTER SEND FILE CONNECTION_FINISHED", ERROR);
             return CONNECTION_FINISHED;
         } else if (clock() / CLOCKS_PER_SEC - this->timeout > CLIENT_SEC_TIMEOUT) {
-            write_to_logs("AFTER SEND FILE TIMEOUT ERROR", ERROR);
             this->message_to_log(ERROR_TIMEOUT);
             return CONNECTION_TIMEOUT_ERROR;
         }
@@ -137,14 +130,11 @@ bool ClientConnection::get_request() {
 }
 
 int ClientConnection::make_response_header(bool root_found) {
-    write_to_logs("make_response_header root_found: " + std::to_string(root_found) + " location: " + location_, ERROR);
     if (root_found) {
         std::string res = erase_query_params(this->staticRoot + location_);
-        write_to_logs("location_  before open " + res, INFO);
         this->file_fd = open(res.c_str(), O_RDONLY);
         struct stat file_stat;
         if (file_fd == NOT_OK || fstat(file_fd, &file_stat) == NOT_OK) {
-            write_to_logs("file_fd " + std::string(file_fd == -1 ? "-1" : "no -1") + "fstat " + std::string(fstat(file_fd, &file_stat) == NOT_OK ? "-1" : "no -1"), ERROR);
 //            std::ifstream iff("/http-test-suite111" + location_);
 //            if (iff.bad()) {
 //                write_to_logs("NOT EXISTS", ERROR);
@@ -152,18 +142,13 @@ int ClientConnection::make_response_header(bool root_found) {
 //                write_to_logs("EXISTS", INFO);
 //            }
             write_to_logs(std::string(this->search_index_file ? "true" : "false") + std::string(this->is_url_dir ? "true" : "false"), WARNING);
-            if (this->search_index_file && this->is_url_dir) {
-                write_to_logs("SET SEARCHING FILE", WARNING);
-            }
         }
 //        write_to_logs("BEFORE HHTP HANDLER" + std::string(this->is_forbidden_status ? "true" : "false"), WARNING);
         this->response = http_handler(request_, res, this->is_forbidden_status).get_string();
-        write_to_logs("response " + this->response, ERROR);
         this->file_fd = open(res.c_str(), O_RDONLY);
         this->line_.clear();
         return this->file_fd == NOT_OK ? NOT_FOUND_STATUS : OK_STATUS;
     } else {
-        write_to_logs("make_response_header IN 404", ERROR);
         this->file_fd = open(PAGE_404, O_RDONLY);
         this->response = http_handler(request_).get_string();
         this->message_to_log(ERROR_404_NOT_FOUND);
@@ -315,15 +300,12 @@ std::string ClientConnection::erase_query_params(std::string url) {
 ClientConnection::connection_stages_t ClientConnection::process_location() {
     std::string url = request_.get_url();
 //    write_to_logs("simple url: " + request_.get_url() + " new url: " + request_.get_url_without_query_params(), INFO);
-    write_to_logs("url in process location", INFO);
     this->message_to_log(INFO_NEW_CONNECTION, url, request_.get_method());
     HttpResponse http_response;
 
     bool is_forbidden = false;
 
     location_ = get_location(url_decode(url), is_forbidden);
-
-    write_to_logs("location in process_location after get_location: " + location_ + " and url " + url, INFO);
 
 //    std::ifstream iff;
 //    iff.open(location_);
@@ -361,8 +343,6 @@ static bool containsRootEscaping(std::string path) {
 }
 
 std::string ClientConnection::get_location(std::string path, bool &is_forbidden) {
-    write_to_logs("path in get_location" + path, INFO);
-
     if (containsRootEscaping(path)) {
         is_forbidden = true;
     }
@@ -384,7 +364,6 @@ std::string ClientConnection::get_location(std::string path, bool &is_forbidden)
 //        }
         if (std::filesystem::is_directory(file)) {
             this->is_url_dir = true;
-            write_to_logs(("IS DIRECTORY"), WARNING);
             bool no_files = true;
 
             for (auto const &dir_entry: std::filesystem::directory_iterator{file}) {
@@ -418,8 +397,6 @@ std::string ClientConnection::get_location(std::string path, bool &is_forbidden)
         this->search_index_file = true;
         return path  + "index.html";
     }
-
-    write_to_logs("BEFORE EXIT " + std::string(this->search_index_file ? "true" : "false"), WARNING);
 
     return path;
 }
