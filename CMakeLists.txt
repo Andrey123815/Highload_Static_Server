@@ -1,5 +1,6 @@
-project(Highload_Static_Server)
 cmake_minimum_required(VERSION 3.16)
+
+project(server)
 
 find_package( Boost COMPONENTS log log_setup REQUIRED )
 
