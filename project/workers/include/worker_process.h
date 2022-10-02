@@ -11,7 +11,7 @@
 
 class WorkerProcess {
 public:
-    explicit WorkerProcess(int listen_sock, std::string staticRoot, std::vector<StaticServerLog*>& vector_logs);
+    explicit WorkerProcess(int listen_sock, std::string staticRoot/*, std::vector<StaticServerLog*>& vector_logs*/);
 
     void run();
 
@@ -21,18 +21,18 @@ public:
 
     static void sigint_handler(int sig);
 
-    void write_to_logs(std::string message, bl::trivial::severity_level lvl);
+//    void write_to_logs(std::string message, bl::trivial::severity_level lvl);
 
 private:
-    typedef enum {
-        INFO_STOP_DONE
-    } log_messages_t;
+//    typedef enum {
+//        INFO_STOP_DONE
+//    } log_messages_t;
 
     std::map<int, class ClientConnection> client_connections;
 
     int listen_sock;
     std::string staticRoot;
-    std::vector<StaticServerLog*> vector_logs;
+//    std::vector<StaticServerLog*> vector_logs;
 
-    void write_to_log(log_messages_t log_type);
+//    void write_to_log(log_messages_t log_type);
 };

@@ -17,7 +17,7 @@ typedef enum {
 
 class ClientConnection {
 public:
-    ClientConnection(int sock, std::string &staticRoot, std::vector<StaticServerLog*>& vector_logs);
+    ClientConnection(int sock, std::string &staticRoot/*, std::vector<StaticServerLog*>& vector_logs*/);
 
     ClientConnection &operator=(const ClientConnection &other) = default;
 
@@ -43,7 +43,7 @@ private:
     int sock;
     clock_t timeout;
     std::string staticRoot;
-    std::vector<StaticServerLog*> vector_logs;
+//    std::vector<StaticServerLog*> vector_logs;
 
     typedef enum {
         GET_REQUEST,
@@ -103,5 +103,5 @@ private:
 
     void set_method();
 
-    void message_to_log(log_messages_t log_type, std::string url = "", std::string method = "");
+//    void message_to_log(log_messages_t log_type, std::string url = "", std::string method = "");
 };

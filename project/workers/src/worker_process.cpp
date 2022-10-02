@@ -14,8 +14,8 @@
 
 extern bool is_stop = false;
 
-WorkerProcess::WorkerProcess(int listen_sock, std::string staticRoot, std::vector<StaticServerLog*>& vector_logs) :
-        listen_sock(listen_sock), staticRoot(staticRoot), vector_logs(vector_logs) {
+WorkerProcess::WorkerProcess(int listen_sock, std::string staticRoot/*, std::vector<StaticServerLog*>& vector_logs*/) :
+        listen_sock(listen_sock), staticRoot(staticRoot)/*, vector_logs(vector_logs)*/ {
     signal(SIGPIPE, SIG_IGN);
     this->setup_signal_handlers();
 }
@@ -39,7 +39,7 @@ void WorkerProcess::run() {
                 ev.data.fd = client;
                 ev.events = EPOLLIN | EPOLLET;
                 epoll_ctl(epoll_fd, EPOLL_CTL_ADD, client, &ev);
-                this->client_connections[client] = ClientConnection(client, this->staticRoot, vector_logs);
+                this->client_connections[client] = ClientConnection(client, this->staticRoot/*, vector_logs*/);
             } else {  // if the event happened on a client socket
                 connection_status_t connection_status = this->client_connections[events[i].data.fd].connection_processing();
                 if (connection_status == CONNECTION_FINISHED || connection_status == CONNECTION_TIMEOUT_ERROR ||
@@ -67,8 +67,8 @@ void WorkerProcess::setup_signal_handlers() {
     sigaction(SIGINT, &act, nullptr);
 }
 
-void WorkerProcess::write_to_logs(const std::string message, bl::trivial::severity_level lvl) {
-    for (auto i : vector_logs) {
-        i->log(message, lvl);
-    }
-}
+//void WorkerProcess::write_to_logs(const std::string message, bl::trivial::severity_level lvl) {
+//    for (auto i : vector_logs) {
+//        i->log(message, lvl);
+//    }
+//}

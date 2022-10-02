@@ -92,7 +92,7 @@ int StaticServer::add_work_processes() {
         if (pid != 0) {
            workers_pid.push_back(pid);
         } else {
-           WorkerProcess worker(this->listen_sock, this->server_settings.get_root(), vector_logs);
+           WorkerProcess worker(this->listen_sock, this->server_settings.get_root()/*, vector_logs*/);
            worker.run();
            break;
         }

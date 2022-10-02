@@ -19,11 +19,9 @@
 
 #define MAX_METHOD_LENGTH 4
 #define CLIENT_SEC_TIMEOUT 5 // maximum request idle time
-#define PAGE_404 "public/404.html" // потом изменить
-#define FOR_404_RESPONSE "/sadfsadf/sadfsaf/asdfsaddf"
 
-ClientConnection::ClientConnection(int sock, std::string &staticRoot, std::vector<StaticServerLog*>& vector_logs) :
-        sock(sock), staticRoot(staticRoot), vector_logs(vector_logs) {}
+ClientConnection::ClientConnection(int sock, std::string &staticRoot/*, std::vector<StaticServerLog*>& vector_logs*/) :
+        sock(sock), staticRoot(staticRoot)/*, vector_logs(vector_logs)*/ {}
 
 connection_status_t ClientConnection::connection_processing() {
     if (this->stage == ERROR_STAGE) {
@@ -32,17 +30,15 @@ connection_status_t ClientConnection::connection_processing() {
 
     if (this->stage == GET_REQUEST) {
         if (!get_request() && clock() / CLOCKS_PER_SEC - this->timeout > CLIENT_SEC_TIMEOUT) {
-            this->message_to_log(ERROR_TIMEOUT);
+//            this->message_to_log(ERROR_TIMEOUT);
             return CONNECTION_TIMEOUT_ERROR;
         }
         try {
             if (last_char_ == '\n') {
                 request_.add_line(line_);
-                write_to_logs(request_.get_url(), INFO);
                 line_.clear();
             }
         } catch (std::exception& e) {
-            this->message_to_log(ERROR_BAD_REQUEST);
             stage = BAD_REQUEST;
         }
         if (request_.first_line_added()) {
@@ -50,33 +46,22 @@ connection_status_t ClientConnection::connection_processing() {
         }
     }
 
-    write_to_logs("AFTER process location, stage: " + std::string(stage == ROOT_FOUND ? "ROOT_FOUND" : "other"), ERROR);
 
     int response_status = OK_STATUS;
-
-//    if (stage == FORBIDDEN_REQUEST) {
-//        write_to_logs("stage FORBIDDEN_REQUEST", INFO);
-//        make_response_header(true, true);
-//        response_status = FORBIDDEN_REQUEST_STATUS;
-//        stage = SEND_HTTP_HEADER_RESPONSE;
-//    }
 
     if (stage == ROOT_FOUND) {
         response_status = make_response_header(true);
         stage = SEND_HTTP_HEADER_RESPONSE;
     }
     if (stage == ROOT_NOT_FOUND) {
-        write_to_logs("ROOT_NOT_FOUND stage", ERROR);
         response_status = make_response_header(false);
         stage = SEND_HTTP_HEADER_RESPONSE;
     }
 
     if (this->stage == SEND_HTTP_HEADER_RESPONSE) {
-        write_to_logs("in stage SEND_HTTP_HEADER_RESPONSE", INFO);
         if (this->send_http_header_response()) {
             this->stage = SEND_FILE;
         } else if (clock() / CLOCKS_PER_SEC - this->timeout > CLIENT_SEC_TIMEOUT) {
-            this->message_to_log(ERROR_TIMEOUT);
             return CONNECTION_TIMEOUT_ERROR;
         }
     }
@@ -91,10 +76,8 @@ connection_status_t ClientConnection::connection_processing() {
 
     if (this->stage == SEND_FILE) {
         if (this->send_file()) {
-            this->message_to_log(INFO_CONNECTION_FINISHED);
             return CONNECTION_FINISHED;
         } else if (clock() / CLOCKS_PER_SEC - this->timeout > CLIENT_SEC_TIMEOUT) {
-            this->message_to_log(ERROR_TIMEOUT);
             return CONNECTION_TIMEOUT_ERROR;
         }
     }
@@ -134,27 +117,14 @@ int ClientConnection::make_response_header(bool root_found) {
         std::string res = erase_query_params(this->staticRoot + location_);
         this->file_fd = open(res.c_str(), O_RDONLY);
         struct stat file_stat;
-        if (file_fd == NOT_OK || fstat(file_fd, &file_stat) == NOT_OK) {
-//            std::ifstream iff("/http-test-suite111" + location_);
-//            if (iff.bad()) {
-//                write_to_logs("NOT EXISTS", ERROR);
-//            } else {
-//                write_to_logs("EXISTS", INFO);
-//            }
-            write_to_logs(std::string(this->search_index_file ? "true" : "false") + std::string(this->is_url_dir ? "true" : "false"), WARNING);
-        }
-//        write_to_logs("BEFORE HHTP HANDLER" + std::string(this->is_forbidden_status ? "true" : "false"), WARNING);
         this->response = http_handler(request_, res, this->is_forbidden_status).get_string();
-        this->file_fd = open(res.c_str(), O_RDONLY);
+//        this->file_fd = open(res.c_str(), O_RDONLY);
         this->line_.clear();
         return this->file_fd == NOT_OK ? NOT_FOUND_STATUS : OK_STATUS;
     } else {
-        this->file_fd = open(PAGE_404, O_RDONLY);
         this->response = http_handler(request_).get_string();
-        this->message_to_log(ERROR_404_NOT_FOUND);
     }
     this->line_.clear();
-//    close(this->file_fd);
 
     return NOT_FOUND_STATUS;
 }
@@ -169,7 +139,6 @@ bool ClientConnection::send_http_header_response() {
             write_result = write(this->sock, "\r\n", 2);
             if (write_result == -1) {
                 this->stage = ERROR_STAGE;
-                this->message_to_log(ERROR_SEND_RESPONSE);
                 return false;
             }
             return true;
@@ -179,7 +148,7 @@ bool ClientConnection::send_http_header_response() {
 
     if (write_result == -1) {
         this->stage = ERROR_STAGE;
-        this->message_to_log(ERROR_SEND_RESPONSE);
+//        this->message_to_log(ERROR_SEND_RESPONSE);
         return false;
     }
 
@@ -204,7 +173,7 @@ bool ClientConnection::send_file() {
 
     if (write_result == -1) {
         this->stage = ERROR_STAGE;
-        this->message_to_log(ERROR_SEND_FILE);
+//        this->message_to_log(ERROR_SEND_FILE);
         return false;
     }
 
@@ -232,44 +201,44 @@ bool ClientConnection::is_end_request() {
     return pos != std::string::npos;
 }
 
-void ClientConnection::message_to_log(log_messages_t log_type, std::string url, std::string method) {
-    switch (log_type) {
-        case INFO_NEW_CONNECTION:
-            this->write_to_logs("New connection [METHOD " + method + "] [URL "
-                                    + url
-                                    + "] [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET " + std::to_string(this->sock)
-                                    + "]", INFO);
-            break;
-        case INFO_CONNECTION_FINISHED:
-            this->write_to_logs("Connection finished successfully [WORKER PID " + std::to_string(getpid()) + "]" + " [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", INFO);
-            break;
-        case ERROR_404_NOT_FOUND:
-            this->write_to_logs("404 NOT FOUND [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                     + std::to_string(this->sock) + "]", ERROR);
-            break;
-        case ERROR_TIMEOUT:
-            this->write_to_logs("TIMEOUT ERROR [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", ERROR);
-            break;
-        case ERROR_READING_REQUEST:
-            this->write_to_logs("Reading request error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", ERROR);
-            break;
-        case ERROR_SEND_RESPONSE:
-            this->write_to_logs("Send response error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", ERROR);
-            break;
-        case ERROR_SEND_FILE:
-            this->write_to_logs("Send file error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", ERROR);
-            break;
-        case ERROR_BAD_REQUEST:
-            this->write_to_logs("Bad request error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
-                                    + std::to_string(this->sock) + "]", ERROR);
-            break;
-    }
-}
+//void ClientConnection::message_to_log(log_messages_t log_type, std::string url, std::string method) {
+//    switch (log_type) {
+//        case INFO_NEW_CONNECTION:
+//            this->write_to_logs("New connection [METHOD " + method + "] [URL "
+//                                    + url
+//                                    + "] [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET " + std::to_string(this->sock)
+//                                    + "]", INFO);
+//            break;
+//        case INFO_CONNECTION_FINISHED:
+//            this->write_to_logs("Connection finished successfully [WORKER PID " + std::to_string(getpid()) + "]" + " [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", INFO);
+//            break;
+//        case ERROR_404_NOT_FOUND:
+//            this->write_to_logs("404 NOT FOUND [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                     + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//        case ERROR_TIMEOUT:
+//            this->write_to_logs("TIMEOUT ERROR [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//        case ERROR_READING_REQUEST:
+//            this->write_to_logs("Reading request error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//        case ERROR_SEND_RESPONSE:
+//            this->write_to_logs("Send response error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//        case ERROR_SEND_FILE:
+//            this->write_to_logs("Send file error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//        case ERROR_BAD_REQUEST:
+//            this->write_to_logs("Bad request error [WORKER PID " + std::to_string(getpid()) + "] [CLIENT SOCKET "
+//                                    + std::to_string(this->sock) + "]", ERROR);
+//            break;
+//    }
+//}
 
 clock_t ClientConnection::get_timeout() {
     return this->timeout;
@@ -299,26 +268,14 @@ std::string ClientConnection::erase_query_params(std::string url) {
 
 ClientConnection::connection_stages_t ClientConnection::process_location() {
     std::string url = request_.get_url();
-//    write_to_logs("simple url: " + request_.get_url() + " new url: " + request_.get_url_without_query_params(), INFO);
-    this->message_to_log(INFO_NEW_CONNECTION, url, request_.get_method());
+//    this->message_to_log(INFO_NEW_CONNECTION, url, request_.get_method());
     HttpResponse http_response;
 
     bool is_forbidden = false;
 
     location_ = get_location(url_decode(url), is_forbidden);
 
-//    std::ifstream iff;
-//    iff.open(location_);
-//    write_to_logs("I AM TUTA " + location_ + " set_searching_index_file "+ std::string(this->set_searching_index_file ? "true" : "false"), DEBUG);
-//    if (this->set_searching_index_file && !iff.is_open() && !this->search_index_file) {
-//        write_to_logs("TUUUT FORBIDDEN", WARNING);
-//        is_forbidden = true;
-//    }
-
     this->is_forbidden_status = is_forbidden;
-//    this->search_index_file = is_forbidden;
-
-//    write_to_logs(std::string(is_forbidden ? "true" : "false") + std::string(this->is_url_dir ? "true" : "false"), WARNING);
 
     if (location_[location_.size() - 1] == '/') {
         return ROOT_NOT_FOUND;
@@ -327,11 +284,11 @@ ClientConnection::connection_stages_t ClientConnection::process_location() {
     return ROOT_FOUND;
 }
 
-void ClientConnection::write_to_logs(std::string message, bl::trivial::severity_level lvl) {
-    for (auto i : vector_logs) {
-        i->log(message, lvl);
-    }
-}
+//void ClientConnection::write_to_logs(std::string message, bl::trivial::severity_level lvl) {
+//    for (auto i : vector_logs) {
+//        i->log(message, lvl);
+//    }
+//}
 
 static bool containsRootEscaping(std::string path) {
     const std::string rootEscaping = "../";
@@ -348,20 +305,8 @@ std::string ClientConnection::get_location(std::string path, bool &is_forbidden)
     }
 
     if (path[path.size() - 1] == '/') {
-        write_to_logs(path, WARNING);
         std::filesystem::path file(this->staticRoot + path);
         std::filesystem::path file1(this->staticRoot + path.substr(0, path.length() - 1));
-//        if (std::filesystem::is_regular_file(file1)) {
-//            write_to_logs("file1 is regular", INFO);
-//            std::ifstream iff;
-//            iff.open(path.substr(0, path.length() - 1));
-////            if (!iff.is_open()) {
-//            write_to_logs("TUUUT FORBIDDEN", WARNING);
-//            is_forbidden = true;
-//            return path;
-////            }
-////            return path;
-//        }
         if (std::filesystem::is_directory(file)) {
             this->is_url_dir = true;
             bool no_files = true;
@@ -378,22 +323,10 @@ std::string ClientConnection::get_location(std::string path, bool &is_forbidden)
                 is_forbidden = true;
             }
 
-//            std::ifstream iff(path + "index.html");
-//            if (iff.bad()) {
-//                is_forbidden = true;
-//            }
-
-//            std::ifstream iff;
-//            iff.open(path + "index.html");
-//            if(!iff) is_forbidden = true;
-
             this->search_index_file = true;
             return path + "index.html";
         }
-//        std::ifstream iff;
-//        iff.open(path + "index.html");
-//        write_to_logs("try " + path + "index.html", INFO);
-//        is_forbidden = true;
+
         this->search_index_file = true;
         return path  + "index.html";
     }
