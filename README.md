@@ -79,14 +79,10 @@ The tests were run several times (in this experiment, we will take the number eq
 Список файлов для тестирования:
 
 1) wikipedia_russia.html
-2) jquery-1.9.1.js
-3) pic_ask.gif
-4) splash.css
-5) 160313.jpg
-6) logo.v2.png
+2) splash.css
 
 | **File type for testing** | **Own Static Server**, rps | **Nginx**, rps | **Number of times difference** |
 |---------------------------|----------------------------|----------------|--------------------------------|
-|   wikipedia_russia.html   |                            | 29975.20       |                                |
-|        splash.css         |                            | 30120.40       |                                |
+|   wikipedia_russia.html   | 1100                       | 29975.20       | 27                             |
+|        splash.css         | 1400                       | 30120.40       | 21                             |
 
