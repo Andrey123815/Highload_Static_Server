@@ -24,6 +24,11 @@ run:
 	@docker run -d --rm -p 80:80 -v $(PWD)/http-test-suite/httptest:/app/httptest:ro --name static-server static-server
 
 
+## stop-static-server: Stop static server in docker
+stop:
+	@docker stop static-server
+
+
 ## rerun: Rerun
 rerun:
 	@docker stop static-server
@@ -48,6 +53,11 @@ build-nginx:
 ## run-nginx: Run nginx server in docker on 8888 port
 run-nginx:
 	@docker run -d --rm -p 8888:8888 --name nginx -t nginx
+
+
+## stop-nginx: Stop nginx server in docker on 8888 port
+stop-nginx:
+	@docker stop nginx
 
 
 ## test-perf-nginx: Test performance nginx

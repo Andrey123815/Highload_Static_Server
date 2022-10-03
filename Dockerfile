@@ -8,7 +8,8 @@ RUN apt-get update && \
     apt-get install -y \
        g++ \
       cmake \
-      libboost-all-dev
+      libboost-all-dev \
+      wrk
 
 COPY . /app
 
