@@ -45,6 +45,7 @@ start() {
     fi
     cp ./cmake-build-debug/static_server.out static_server.out
     "$STATIC_SERVER_HOME"/static_server.out
+    rm static_server.out
     echo "Server started!"
     exit 0
   fi
