@@ -14,7 +14,7 @@ int process_stop = 0;
 
 StaticServer::StaticServer() {
     this->server_settings = MainServerSettings(DEFAULT_CONFIG_PATH);
-    this->count_workflows = sysconf(_SC_NPROCESSORS_ONLN);;
+    this->count_workflows = this->server_settings.get_count_workers();
     vector_logs.push_back(&error_log);
     vector_logs.push_back(&access_log);
     write_to_logs("SERVER STARTING...", INFO);
