@@ -83,6 +83,6 @@ The tests were run several times (in this experiment, we will take the number eq
 
 | **File type for testing** | **Own Static Server**, rps | **Nginx**, rps | **Number of times difference** |
 |---------------------------|----------------------------|----------------|--------------------------------|
-|   wikipedia_russia.html   | 1100                       | 29975.20       | 27                             |
-|        splash.css         | 1400                       | 30120.40       | 21                             |
+|   wikipedia_russia.html   | 11100                      | 29975.20       | 2.70                           |
+|        splash.css         | 15142                      | 30120.40       | 2.09                           |
 
